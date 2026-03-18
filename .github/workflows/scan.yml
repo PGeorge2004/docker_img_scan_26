@@ -51,10 +51,19 @@ jobs:
           only-severities: critical,high # only show critical and high CVEs
           only-fixed: true # filter to fixed CVEs
           exit-code: false  # fail or not based on CVEs found?
-          sarif-max-related-locations: 1000
           sarif-file: sca_scout.sarif
           output: sbom_scout.spdx.json
           format: spdx
+          
+      - name: Trim SARIF relatedLocations
+        run: |
+          jq '
+            .runs[].results[] |=
+            (if .relatedLocations then
+              .relatedLocations = .relatedLocations[:1000]
+            else . end)
+          ' sca_scout.sarif > fixed.sarif
+          mv fixed.sarif sca_scout.sarif
 
       - name: Upload SBOM file as an artifact
         uses: actions/upload-artifact@v4
