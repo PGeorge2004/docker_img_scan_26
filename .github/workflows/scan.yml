@@ -42,39 +42,36 @@ jobs:
       # Pull the github input image or use the default
       - name: Pull the image
         run: docker pull ${{ github.event.inputs.docker_image }}
-
-      - name: Docker Scout (SARIF for GitHub)
+      
+      - name: Docker Scout
         uses: docker/scout-action@v1
         with:
-          command: cves
+          command: cves,recommendations,compare,sbom
           image: ${{ github.event.inputs.docker_image }}
-          sarif-file: sca_scout.sarif
-          only-severities: critical,high
-          only-fixed: true
           exit-code: false
-          
-      - name: Docker Scout (SBOM + recommendations + compare)
-        uses: docker/scout-action@v1
-        with:
-          command: sbom,recommendations,compare
-          image: ${{ github.event.inputs.docker_image }}
+          sarif-file: sca_scout.sarif
           output: sbom_scout.spdx.json
           format: spdx
-          exit-code: false
+          only-severities: critical,high
+          only-fixed: true
+
+      - name: Compress SBOM and SARIF Files
+        run: |
+          zip sbom_scout.zip sbom_scout.spdx.json
+          zip sca_scout.zip sca_scout.sarif
 
       - name: Upload SBOM file as an artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sbom_scout.spdx.json
-          path: sbom_scout.spdx.json
+          name: sbom_scout.zip
+          path: sbom_scout.zip
 
       - name: Upload SARIF file as an artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sca_scout.sarif
-          path: sca_scout.sarif
+          name: sca_scout.zip
+          path: sca_scout.zip
 
-      # Only available on Github Enterprise or public repositories
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
         with:
