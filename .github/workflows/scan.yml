@@ -43,31 +43,18 @@ jobs:
       - name: Pull the image
         run: docker pull ${{ github.event.inputs.docker_image }}
 
-      - name: Docker Scout (SARIF for GitHub)
+      - name: Docker Scout
         uses: docker/scout-action@v1
         with:
-          command: cves
+          command: cves,recommendations,compare,sbom
           image: ${{ github.event.inputs.docker_image }}
+          only-severities: critical,high # only show critical and high CVEs
+          only-fixed: true # filter to fixed CVEs
+          exit-code: false  # fail or not based on CVEs found?
           sarif-file: sca_scout.sarif
-          only-severities: critical,high
-          only-fixed: true
-          exit-code: false
-
-      - name: Docker Scout (SBOM + Recommendations + Compare)
-        uses: docker/scout-action@v1
-        with:
-          command: sbom,recommendations,compare
-          image: ${{ github.event.inputs.docker_image }}
           output: sbom_scout.spdx.json
           format: spdx
-          exit-code: false
 
-      - name: Trim SARIF related locations
-        run: |
-          jq '.runs[].results |= map(
-                .relatedLocations |= (if . == null then [] else . end | .[0:1000])
-              )' sca_scout.sarif > sca_scout_fixed.sarif
-            
       - name: Upload SBOM file as an artifact
         uses: actions/upload-artifact@v4
         with:
@@ -80,12 +67,12 @@ jobs:
           name: sca_scout.sarif
           path: sca_scout.sarif
 
-      # Only available on Github Enterprise or public repositories
-      - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: sca_scout_trimmed.sarif
-          category: Security/SCA
+      # # Only available on Github Enterprise or public repositories
+      # - name: Upload SARIF file
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: sca_scout.sarif
+      #     category: Security/SCA
 
       - name: SBOM upload
         uses: advanced-security/spdx-dependency-submission-action@v0.1.1
