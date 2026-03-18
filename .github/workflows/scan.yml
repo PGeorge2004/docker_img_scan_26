@@ -43,27 +43,24 @@ jobs:
       - name: Pull the image
         run: docker pull ${{ github.event.inputs.docker_image }}
 
-      - name: Docker Scout
+      - name: Docker Scout (SARIF for GitHub)
         uses: docker/scout-action@v1
         with:
-          command: cves,recommendations,compare,sbom
+          command: cves
           image: ${{ github.event.inputs.docker_image }}
-          only-severities: critical,high # only show critical and high CVEs
-          only-fixed: true # filter to fixed CVEs
-          exit-code: false  # fail or not based on CVEs found?
           sarif-file: sca_scout.sarif
+          only-severities: critical,high
+          only-fixed: true
+          exit-code: false
+
+      - name: Docker Scout (SBOM + Recommendations + Compare)
+        uses: docker/scout-action@v1
+        with:
+          command: sbom,recommendations,compare
+          image: ${{ github.event.inputs.docker_image }}
           output: sbom_scout.spdx.json
           format: spdx
-          
-      - name: Trim SARIF relatedLocations
-        run: |
-          jq '
-            .runs[].results[] |=
-            (if .relatedLocations then
-              .relatedLocations = .relatedLocations[:1000]
-            else . end)
-          ' sca_scout.sarif > fixed.sarif
-          mv fixed.sarif sca_scout.sarif
+          exit-code: false
 
       - name: Upload SBOM file as an artifact
         uses: actions/upload-artifact@v4
