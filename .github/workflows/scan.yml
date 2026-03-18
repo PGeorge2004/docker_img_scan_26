@@ -64,8 +64,9 @@ jobs:
 
       - name: Trim SARIF related locations
         run: |
-          jq '.runs[].results |= map(.relatedLocations |= if length > 1000 then .[0:1000] else . end)' \
-          sca_scout.sarif > sca_scout_trimmed.sarif
+          jq '.runs[].results |= map(
+                .relatedLocations |= (if . == null then [] else . end | .[0:1000])
+              )' sca_scout.sarif > sca_scout_fixed.sarif
             
       - name: Upload SBOM file as an artifact
         uses: actions/upload-artifact@v4
